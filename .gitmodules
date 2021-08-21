@@ -1,0 +1,3 @@
+[submodule "src/YOLOX"]
+	path = src/YOLOX
+	url = https://github.com/zaalsabb/YOLOX.git
