@@ -1,6 +1,6 @@
 # yolox_ros
 
-ROS wrapper for YOLOX for spalling detection [YOLOX](https://github.com/MACILLAS/YOLOX).
+ROS wrapper for [YOLOX](https://github.com/MACILLAS/YOLOX) for spalling detection.
 
 ## Installation
 This package uses python 3, so you must create a separate catkin workspace that's compatible with python 3 if your ROS version still uses python 2. (Based on this guide [How to setup ROS with Python 3](https://medium.com/@beta_b0t/how-to-setup-ros-with-python-3-44a69ca36674))
