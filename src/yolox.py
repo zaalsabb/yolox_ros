@@ -4,48 +4,55 @@ import sys
 import rospy
 import cv2
 from CvBridge import imgmsg_to_cv2, cv2_to_imgmsg
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CameraInfo
+import message_filters
 import numpy as np
 
 import onnxruntime
 
-yolox_module_dir = '/'.join(os.path.dirname(os.path.realpath(__file__)).split('/')[:-1])+'/YOLOX'
-sys.path.insert(0,yolox_module_dir)
+YOLOX_module=os.path.join(os.path.dirname(os.path.realpath(__file__)),'YOLOX')
+sys.path.insert(0,YOLOX_module)
 
-from yolox.data.data_augment import preproc as preprocess
-from yolox.utils import multiclass_nms, demo_postprocess, vis
+from YOLOX.yolox.data.data_augment import preproc as preprocess
+from YOLOX.yolox.utils import multiclass_nms, demo_postprocess, vis
 
-from yolox_ros.msg import BoundingBox, BoundingBoxes
+from yolox_ros.msg import BoundingBox, BoundingBoxes2D
 
 class Node:
 
     def __init__(self):
 
         rospy.init_node('yolox')
-        self.model = rospy.get_param('~model', default=os.path.join(yolox_module_dir,'yolox.onnx'))        
+        self.model = rospy.get_param('~model', default=os.path.join(YOLOX_module,'yolox.onnx'))        
         self.session = self.open_sess(model=self.model)
 
-        rospy.Subscriber('/image', Image,self.callback)
-        self.pub1 = rospy.Publisher('/bounding_boxes',BoundingBoxes,queue_size=1)
+        sub1=message_filters.Subscriber('/image', Image)
+        sub2=message_filters.Subscriber('/camera_info', CameraInfo)
+
+        self.pub1 = rospy.Publisher('/bounding_boxes2D',BoundingBoxes2D,queue_size=1)
         self.pub2 = rospy.Publisher('/debug/image',Image,queue_size=1)
+
+        ts = message_filters.ApproximateTimeSynchronizer([sub1, sub2], 1, 0.5) 
+        ts.registerCallback(self.callback)        
 
         rospy.spin()
 
     def callback(self,*args):
         image = imgmsg_to_cv2(args[0])
+        caminfo_msg = args[1]
         final_boxes, final_scores, final_cls_inds = self.run(sess=self.session, img=image, visual=False)
+        msg_bb = BoundingBoxes2D()
+        msg_bb.header.stamp = rospy.Time()
+        msg_bb.header.frame_id = "detection"
+        msg_bb.camera_info = caminfo_msg
         if final_boxes is not None:
-            msg_bb = BoundingBoxes()
-            msg_bb.header.stamp = rospy.Time()
-            msg_bb.header.frame_id = "detection"
-            msg_bb.image_header = args[0].header
             for box,score in zip(final_boxes,final_scores):
                 bb = BoundingBox()
                 bb.Class = "spalling"
-                bb.xmin = box[0]
-                bb.ymin = box[1]
-                bb.xmax = box[2]
-                bb.ymax = box[3]
+                bb.xmin = int(box[0])
+                bb.ymin = int(box[1])
+                bb.xmax = int(box[2])
+                bb.ymax = int(box[3])
                 bb.probability = score
                 msg_bb.bounding_boxes.append(bb)
 
@@ -54,8 +61,7 @@ class Node:
                 else:
                     image = image                
         
-            self.pub1.publish(msg_bb)
-
+        self.pub1.publish(msg_bb)
         msg = cv2_to_imgmsg(image)
         self.pub2.publish(msg)       
         
@@ -98,7 +104,7 @@ class Node:
 
         return final_boxes, final_scores, final_cls_inds
 
-
+      
 
 if __name__ == '__main__':
     Node() 

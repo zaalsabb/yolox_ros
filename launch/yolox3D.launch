@@ -1,0 +1,21 @@
+<launch>
+    <node pkg="image_transport" type="republish" name="uncompress_camera_bag" output="screen" 
+        args="compressed in:=/F2/image_raw raw out:=/image" />
+
+    <node pkg="topic_tools" type="throttle" name="throttle_depth" args="messages /image 1.0" />
+
+    <node pkg="yolox_ros" type="yolox.py" name="yolox" >
+        <remap from="camera_info" to= "/F2/camera_info" />
+        <!--remap from="/image" to= "/image_throttle" /-->        
+    </node>
+
+    <node pkg="yolox_ros" type="raycast.py" name="raycast" output="screen" >
+		<param name="pointcloud_file" value="/home/zaid/datasets/ig_sim/ig_sim_2021-08-13-10-31-14/pointcloud/pointcloud2_subsampled.pcd"/>
+    </node>
+
+	<node name="tf2pose" pkg="tf2pose" type="tf2pose" output="screen">
+		<param name="map_id" value="world"/>
+		<param name="frame_id" value="F2_link"/>
+	</node>
+
+</launch>
