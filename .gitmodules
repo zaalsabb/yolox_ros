@@ -1,3 +1,6 @@
 [submodule "src/YOLOX"]
 	path = src/YOLOX
 	url = https://github.com/zaalsabb/YOLOX.git
+[submodule "tf2pose"]
+	path = tf2pose
+	url = git@github.com:zaalsabb/tf2pose.git
