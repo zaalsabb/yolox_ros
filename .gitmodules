@@ -1,5 +1,5 @@
-[submodule "src/YOLOX"]
-	path = src/YOLOX
+[submodule "YOLOX"]
+	path = yolox_ros/src/YOLOX
 	url = https://github.com/zaalsabb/YOLOX.git
 [submodule "tf2pose"]
 	path = tf2pose
