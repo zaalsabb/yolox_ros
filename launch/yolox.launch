@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="yolox_ros" type="yolox.py" name="yolox" >
+        <remap from="camera_info" to= "/F1/camera_info" />
+        <remap from="image" to= "/F1/image" />
+    </node>
+
+</launch>

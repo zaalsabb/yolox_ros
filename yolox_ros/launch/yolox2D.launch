@@ -1,6 +1,0 @@
-<launch>
-    <node pkg="image_transport" type="republish" name="uncompress_camera_bag" output="screen" 
-        args="compressed in:=/image_compressed raw out:=/image" />
-
-    <node pkg="yolox_ros" type="yolox.py" name="yolox" />
-</launch>
