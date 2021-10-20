@@ -1,6 +1,3 @@
-[submodule "tf2pose"]
-	path = tf2pose
-	url = git@github.com:zaalsabb/tf2pose.git
-[submodule "yolox_ros/src/YOLOX"]
-	path = yolox_ros/src/YOLOX
+[submodule "src/YOLOX"]
+	path = src/YOLOX
 	url = git@github.com:zaalsabb/YOLOX.git
