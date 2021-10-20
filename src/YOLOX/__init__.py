@@ -1,1 +1,0 @@
-from detspall import detspall
