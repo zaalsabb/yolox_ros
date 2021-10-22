@@ -8,7 +8,7 @@ from sensor_msgs.msg import Image, CameraInfo
 import message_filters
 import numpy as np
 import pandas as pd
-
+import tf2_ros
 
 YOLOX_module=os.path.join(os.path.dirname(os.path.realpath(__file__)),'YOLOX')
 sys.path.insert(0,YOLOX_module)
@@ -23,7 +23,7 @@ class Node:
 
         rospy.init_node('yolox')
         self.model = rospy.get_param('~model', default=os.path.join(YOLOX_module,'yolox.onnx'))       
-        self.datadir = rospy.get_param('~datadir', default=os.path.join(YOLOX_module,'datasets/tmp')) 
+        self.segment_rate = rospy.get_param('~segment_rate', default=1) 
         self.num_images = rospy.get_param('~num_images', default=8)         
 
         sub1=message_filters.Subscriber('/image', Image)
@@ -40,6 +40,8 @@ class Node:
         self.bb_df = pd.DataFrame(columns=['file', 'x1', 'y1', 'x2', 'y2', 'track'])
         self.lastTrackIdx = 0
         self.i = 0
+        self.t1 = rospy.get_time()
+        self.t2 = None
         self.new_object_thres = 0.5
         self.current_object_thres = self.new_object_thres
 
@@ -55,11 +57,14 @@ class Node:
             #print(bbsTrack)
             if bbsTrack[4] == self.lastTrackIdx: #still tracking same object
                 self.current_object_thres = 0
-                imgFile = str(self.i)+'.png'
                 entry = pd.DataFrame(
-                        {'file': imgFile, 'x1': bbsTrack[0], 'y1': bbsTrack[1], 'x2': bbsTrack[2], 'y2': bbsTrack[3], 'track': bbsTrack[4]}, index=[self.i])
+                        {'file': '', 'x1': bbsTrack[0], 'y1': bbsTrack[1], 'x2': bbsTrack[2], 'y2': bbsTrack[3], 'track': bbsTrack[4]}, index=[self.i])
                 self.bb_df = self.bb_df.append(entry)
                 self.i += 1
+                self.t2 = rospy.get_time()
+                if (self.t2-self.t1) > 1/self.segment_rate:
+                    pass
+                
                 # real implementation we will need to save the images in a different directory
             else: #starting to track the next object (TRIGGER)
                 self.current_object_thres = self.new_object_thres
@@ -69,8 +74,10 @@ class Node:
             self.sendMsg(bbsTrack,conf,caminfo)
             self.sendDebugImg(img,bbsTrack)
 
-    def SegmentationRequest(self,imgs_list):
-        pass
+    def sendSegmentImg(self,img,bbsTrack,i):
+
+        img_msg = cv2_to_imgmsg(img)
+        self.pub2.publish(img_msg) 
 
     def sendMsg(self,bbsTrack,conf,caminfo):
         bb = BoundingBox()
