@@ -1,5 +1,6 @@
 <launch>
     <node pkg="yolox_ros" type="yolox.py" name="yolox" >
+	<param name="map_frame_id" value="world"/>
         <remap from="camera_info" to= "/F1/camera_info" />
         <remap from="image" to= "/F1/image" />
     </node>

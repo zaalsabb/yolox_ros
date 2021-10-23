@@ -1,9 +1,9 @@
 Header header
 sensor_msgs/CameraInfo camera_info
-int64 xmin
-int64 ymin
-int64 xmax
-int64 ymax
-int16 id
-float64 probability
+int64 x1
+int64 y1
+int64 x2
+int64 y2
+int16 track
+float64 confidence
 string Class
