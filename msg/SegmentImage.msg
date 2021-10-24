@@ -1,4 +1,4 @@
 Header header
-sensor_msgs/Image image
+sensor_msgs/CompressedImage image
 BoundingBox bbox
 geometry_msgs/Transform transform

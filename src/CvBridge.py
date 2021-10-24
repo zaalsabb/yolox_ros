@@ -9,7 +9,7 @@
 import sys
 import numpy as np
 import rospy
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, CompressedImage
 import cv2
 
 def imgmsg_to_cv2(img_msg):
@@ -36,3 +36,42 @@ def cv2_to_imgmsg(cv_image,encoding="bgr8"):
     img_msg.data = cv_image.tostring()
     img_msg.step = len(img_msg.data) // img_msg.height # That double line is actually integer division, not a comment
     return img_msg
+
+def cv2_to_compressed_imgmsg(cvim, dst_format = "jpg"):
+
+    import cv2
+    import numpy as np
+    if not isinstance(cvim, (np.ndarray, np.generic)):
+        raise TypeError('Your input type is not a numpy array')
+    cmprs_img_msg = CompressedImage()
+    cmprs_img_msg.format = dst_format
+    ext_format = '.' + dst_format
+    try:
+        cmprs_img_msg.data = np.array(cv2.imencode(ext_format, cvim)[1]).tostring()
+    except cv2.error as e:
+        print("Could not compress image: {}".format(e))
+        return None
+
+    return cmprs_img_msg
+
+def compressed_imgmsg_to_cv2(cmprs_img_msg, desired_encoding = "passthrough"):
+
+    import cv2
+    import numpy as np
+
+    str_msg = cmprs_img_msg.data
+    buf = np.ndarray(shape=(1, len(str_msg)),
+                        dtype=np.uint8, buffer=cmprs_img_msg.data)
+    im = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)
+
+    if desired_encoding == "passthrough":
+        return im
+    elif desired_encoding == "rgb8":
+        return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+    try:
+        res = cv2.cvtColor(im, "bgr8", desired_encoding)
+    except RuntimeError as e:
+        print("Could not convert image: {}".format(e))
+        return None
+
+    return res    

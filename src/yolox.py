@@ -3,8 +3,9 @@ import os
 import sys
 import rospy
 import cv2
-from CvBridge import imgmsg_to_cv2, cv2_to_imgmsg
-from sensor_msgs.msg import Image, CameraInfo
+import CvBridge
+from sensor_msgs.msg import Image, CameraInfo, CompressedImage
+from std_msgs.msg import Empty
 import message_filters
 import numpy as np
 import pandas as pd
@@ -36,6 +37,7 @@ class Node:
         self.pub1 = rospy.Publisher('/bounding_box',BoundingBox,queue_size=1)
         self.pub2 = rospy.Publisher('/debug/image',Image,queue_size=1)
         self.pub3 = rospy.Publisher('/segment_image',SegmentImage,queue_size=1)
+        self.pub4 = rospy.Publisher('/segment_req',Empty,queue_size=1)
 
         ts = message_filters.ApproximateTimeSynchronizer([sub1, sub2], 1, 0.5) 
         ts.registerCallback(self.callback)
@@ -53,32 +55,26 @@ class Node:
         rospy.spin()
 
     def callback(self,*args):
-        img = imgmsg_to_cv2(args[0])
+        img = CvBridge.imgmsg_to_cv2(args[0])
         caminfo = args[1]
         bbsTrack,conf = self.spallDetector.detAndTrack(img)
         
-
         if bbsTrack.size > 0 and conf > self.current_object_thres: #check if returned a bounding box            
             bbsTrack = bbsTrack[0]
             bb_msg = self.sendBoundingBoxMsg(bbsTrack,conf,caminfo)
-            #print(bbsTrack)
             if bbsTrack[4] == self.lastTrackIdx: #still tracking same object
                 self.current_object_thres = 0
-                # entry = pd.DataFrame(
-                #         {'file': '', 'x1': bbsTrack[0], 'y1': bbsTrack[1], 'x2': bbsTrack[2], 'y2': bbsTrack[3], 'track': bbsTrack[4]}, index=[self.i])
-                # self.bb_df = self.bb_df.append(entry)
                 self.i += 1
                 self.t2 = rospy.get_time()
                 if (self.t2-self.t1) > 1/self.segment_rate:
                     self.sendSegmentImg(img,bb_msg,self.i,caminfo.header.frame_id)
                     self.t1 = self.t2
-                
-                # real implementation we will need to save the images in a different directory
+                                    
             else: #starting to track the next object (TRIGGER)
                 self.current_object_thres = self.new_object_thres
                 self.lastTrackIdx = bbsTrack[4]
-                # need to sample the dataframe for number of images
-                #bb_df_elements = self.bb_df.sample(n=self.num_images) #randomly sample 8 elements
+                # start segmentation
+                self.pub4.publish(Empty())
             
             self.sendDebugImg(img,bbsTrack)     
 
@@ -91,9 +87,10 @@ class Node:
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             return 
 
+        img_msg = CvBridge.cv2_to_compressed_imgmsg(img)
         msg.header.stamp = bb_msg.header.stamp
         msg.header.frame_id = camera_frame_id
-        msg.image = cv2_to_imgmsg(img)
+        msg.image = img_msg
         msg.bbox = bb_msg
         msg.transform = trans.transform
         self.pub3.publish(msg) 
@@ -123,7 +120,7 @@ class Node:
         else:
             color = (0, 0, 255)
         img = cv2.rectangle(img, (int(bbsTrack[0]),int(bbsTrack[1])), (int(bbsTrack[2]),int(bbsTrack[3])), color, 3)        
-        msg = cv2_to_imgmsg(img)
+        msg = CvBridge.cv2_to_imgmsg(img)
         self.pub2.publish(msg)      
 
 
